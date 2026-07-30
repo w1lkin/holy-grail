@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+  <title>掷筊问卜 · 打工人的玄学时刻</title>
+  <style>
+    :root {
+      --bg: #f5f5f0;
+      --card: #ffffff;
+      --text: #2c2c2c;
+      --text-secondary: #888888;
+      --excel-green: #217346;
+      --coffee: #6f4e37;
+      --approval-red: #c41e3a;
+      --overtime-blue: #1d3557;
+      --border: #e0dcd0;
+      --gold: #d4a017;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 420px;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .input-section { margin-bottom: 12px; }
+
+    .question-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 15px;
+      background: var(--card);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .question-input:focus { border-color: var(--coffee); }
+    .question-input::placeholder { color: #ccc; }
+
+    .history-btn {
+      width: 44px; height: 44px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .history-btn:active { background: var(--border); }
+
+    /* 历史弹窗 */
+    .history-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+      padding: 24px;
+    }
+    .history-card {
+      background: var(--card);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+    .history-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-card-title { font-size: 16px; font-weight: bold; }
+    .history-card-close {
+      background: none; border: none;
+      font-size: 20px; cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .history-card-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+    }
+    .history-empty {
+      text-align: center;
+      color: #ccc;
+      padding: 40px 0;
+      font-size: 14px;
+    }
+
+    .blocks-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-height: 460px;
+      perspective: 1000px;
+    }
+
+    .cards-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .card-wrapper {
+      width: 122px;
+      height: 195px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.1s;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card-wrapper.flipped {
+      cursor: default;
+    }
+
+    /* 卡片通用 — 纯视觉，点击穿透到 cardWrapper */
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      pointer-events: none;
+    }
+    .card-face * {
+      pointer-events: none;
+    }
+
+    /* 卡背 — 神秘星空 */
+    .card-back {
+      background: linear-gradient(135deg, #0d0d2b 0%, #1a1040 30%, #2d1b69 60%, #1a1040 100%);
+      border: 2px solid #8b7ec8;
+      box-shadow: 0 0 24px rgba(139,126,200,0.25), 0 10px 30px rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      z-index: 1;
+    }
+    /* 卡背星纹 */
+    .card-back::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.8) 50%, transparent 50%),
+        radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,0.6) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 40% 60%, rgba(255,255,255,0.9) 50%, transparent 50%),
+        radial-gradient(1px 1px at 80% 70%, rgba(255,255,255,0.5) 50%, transparent 50%),
+        radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.7) 50%, transparent 50%),
+        radial-gradient(1px 1px at 55% 20%, rgba(255,255,255,0.6) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 90% 45%, rgba(255,255,255,0.8) 50%, transparent 50%),
+        radial-gradient(1px 1px at 30% 50%, rgba(255,255,255,0.4) 50%, transparent 50%);
+    }
+    /* 卡背中心图案 */
+    .card-back::after {
+      content: '';
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border: 2px solid rgba(200,180,255,0.3);
+      border-radius: 50%;
+      box-shadow: 0 0 30px rgba(180,150,255,0.15), inset 0 0 30px rgba(180,150,255,0.1);
+    }
+    .card-back-inner {
+      position: relative;
+      z-index: 1;
+      color: rgba(200,185,255,0.7);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-align: center;
+      pointer-events: none;
+    }
+    .card-back-inner .moon-icon { font-size: 30px; display: block; margin-bottom: 6px; }
+
+    /* 卡面 — 象牙白底 */
+    .card-front {
+      background: linear-gradient(160deg, #fdf8f0 0%, #f8f0e0 30%, #f0e8d0 70%, #e8dcc0 100%);
+      border: 2px solid #c4a87c;
+      box-shadow: 0 0 20px rgba(200,160,100,0.2), 0 8px 24px rgba(0,0,0,0.25);
+      transform: rotateY(180deg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 8px;
+      box-sizing: border-box;
+      z-index: 2;
+      overflow: hidden;
+    }
+    .card-front .card-header {
+      font-size: 7px;
+      letter-spacing: 1.5px;
+      color: #9a8a6a;
+      text-transform: uppercase;
+      margin-bottom: 1px;
+    }
+    .card-front .card-result-icon {
+      font-size: 26px;
+      margin: 1px 0;
+      line-height: 1.1;
+    }
+    .card-front .card-result-label {
+      font-size: 15px;
+      font-weight: bold;
+      color: #5c4a2a;
+      margin-bottom: 1px;
+    }
+    .card-front .card-divider {
+      width: 24px;
+      height: 1px;
+      background: #d4c0a0;
+      margin: 3px 0;
+    }
+    .card-front .card-zodiac {
+      font-size: 10px;
+      color: #8a7a58;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-bottom: 1px;
+    }
+    .card-front .card-zodiac .sign { font-size: 16px; }
+    .card-front .card-tip {
+      font-size: 10px;
+      color: #7a6a4a;
+      line-height: 1.35;
+      text-align: center;
+      margin-top: 3px;
+      padding: 4px 6px;
+      background: rgba(200,170,120,0.1);
+      border-radius: 6px;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+
+    /* 洗牌按钮 */
+    .shuffle-btn {
+      display: none;
+      width: 100%;
+      padding: 12px;
+      margin-top: 16px;
+      background: linear-gradient(135deg, #2d1b69, #1a1040);
+      color: #c8b9ff;
+      border: none;
+      border-radius: 25px;
+      font-size: 15px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      cursor: pointer;
+    }
+    .shuffle-btn.show { display: block; }
+
+    /* 翻转关键帧 */
+    @keyframes cardFloat {
+      0% { transform: translateY(60px) scale(0.85); opacity: 0; }
+      30% { transform: translateY(-30px) scale(1.03); opacity: 1; }
+      60% { transform: translateY(-10px) scale(0.98); }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .swipe-hint {
+      margin-top: 24px;
+      color: #ccc;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    /* 里程碑 toast */
+    .milestone-toast {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--approval-red);
+      text-shadow: 0 0 20px rgba(196,30,58,0.4);
+      z-index: 150;
+      pointer-events: none;
+      white-space: nowrap;
+      animation: toastIn 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards,
+                 toastOut 0.4s ease-in 1.6s forwards;
+    }
+
+    @keyframes toastIn {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    @keyframes toastOut {
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      100% { transform: translate(-50%, -60%) scale(0.8); opacity: 0; }
+    }
+
+    .stop-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--card);
+      border: 2px solid var(--approval-red);
+      color: var(--approval-red);
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+    .stop-btn:active { background: var(--approval-red); color: #fff; }
+    .stop-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+    /* 结算面板 */
+    .settle-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 24px;
+    }
+    .settle-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 340px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .settle-tier { font-size: 28px; font-weight: bold; margin-bottom: 8px; }
+    .settle-stats { font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; }
+    .settle-interpretation {
+      font-size: 15px;
+      line-height: 1.7;
+      padding: 16px;
+      background: #fdf8f0;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      border-left: 3px solid var(--coffee);
+      text-align: left;
+      min-height: 60px;
+      position: relative;
+    }
+    /* AI 打字光标 */
+    .typing-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--coffee);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 0.6s step-end infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    /* AI 标签 */
+    .ai-badge {
+      display: inline-block;
+      font-size: 10px;
+      color: var(--coffee);
+      background: rgba(111,78,55,0.1);
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .settle-date { font-size: 11px; color: #ccc; margin-bottom: 14px; }
+
+    .settle-actions { display: flex; flex-direction: column; gap: 8px; }
+    .btn-share, .btn-retry {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-share { background: var(--overtime-blue); color: #fff; }
+    .btn-retry { background: var(--border); color: var(--text); }
+
+    .share-preview {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-top: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    /* 历史记录 */
+    .history-section { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .history-title { font-size: 13px; font-weight: bold; margin-bottom: 8px; text-align: left; }
+    .history-list { max-height: 200px; overflow-y: auto; }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: #fafaf5;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .history-item-left { text-align: left; flex: 1; min-width: 0; }
+    .history-item-date { color: #bbb; font-size: 10px; }
+    .history-item-question { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-item-tier { font-size: 16px; flex-shrink: 0; margin-left: 8px; }
+
+    /* 暴击特效 */
+    @keyframes criticalBg {
+      0% { background: var(--bg); }
+      50% { background: #fffbe6; }
+      100% { background: #ffe066; }
+    }
+    @keyframes coinFall {
+      0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+    @keyframes promoPop {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    .critical-bg { animation: criticalBg 0.4s ease-in-out 5; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 输入区 -->
+    <div class="input-section">
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="question-input" id="questionInput" placeholder="写下想问的事（不写也行）" maxlength="50" style="flex:1;">
+        <button class="history-btn" id="historyBtn" onclick="window._showHistory && window._showHistory()">📋</button>
+      </div>
+    </div>
+
+    <!-- 塔罗牌抽卡区 -->
+    <div class="blocks-area" id="blocksArea">
+      <div class="cards-row" id="cardsRow">
+        <!-- 卡1 -->
+        <div class="card-wrapper" id="card0" data-index="0" onclick="window._flipCard && window._flipCard(0)">
+          <div class="card-face card-back">
+            <div class="card-back-inner"><span class="moon-icon">🌙</span></div>
+          </div>
+          <div class="card-face card-front">
+            <div class="card-header">DIVINATION</div>
+            <div class="card-result-icon">✨</div>
+            <div class="card-result-label">圣杯</div>
+            <div class="card-divider"></div>
+            <div class="card-zodiac"><span class="sign">♈</span><span class="zodiac-name">白羊座</span></div>
+            <div class="card-tip">宜保持信心</div>
+          </div>
+        </div>
+        <!-- 卡2 -->
+        <div class="card-wrapper" id="card1" data-index="1" onclick="window._flipCard && window._flipCard(1)">
+          <div class="card-face card-back">
+            <div class="card-back-inner"><span class="moon-icon">🌙</span></div>
+          </div>
+          <div class="card-face card-front">
+            <div class="card-header">DIVINATION</div>
+            <div class="card-result-icon">✨</div>
+            <div class="card-result-label">圣杯</div>
+            <div class="card-divider"></div>
+            <div class="card-zodiac"><span class="sign">♉</span><span class="zodiac-name">金牛座</span></div>
+            <div class="card-tip">宜保持信心</div>
+          </div>
+        </div>
+        <!-- 卡3 -->
+        <div class="card-wrapper" id="card2" data-index="2" onclick="window._flipCard && window._flipCard(2)">
+          <div class="card-face card-back">
+            <div class="card-back-inner"><span class="moon-icon">🌙</span></div>
+          </div>
+          <div class="card-face card-front">
+            <div class="card-header">DIVINATION</div>
+            <div class="card-result-icon">✨</div>
+            <div class="card-result-label">圣杯</div>
+            <div class="card-divider"></div>
+            <div class="card-zodiac"><span class="sign">♊</span><span class="zodiac-name">双子座</span></div>
+            <div class="card-tip">宜保持信心</div>
+          </div>
+        </div>
+      </div>
+      <div class="swipe-hint">✨ 第 1 轮 · 依次点击卡牌</div>
+      <button class="shuffle-btn" id="shuffleBtn" onclick="window._shuffle && window._shuffle()">🔄 洗牌 · 再来一轮</button>
+    </div>
+
+    <!-- STOP 按钮 -->
+    <button class="stop-btn" id="stopBtn">⏹ STOP · 见好就收</button>
+  </div>
+<script>
+(function() {
+  const cardWrappers = [
+    document.getElementById('card0'),
+    document.getElementById('card1'),
+    document.getElementById('card2')
+  ];
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const swipeHint = document.querySelector('.swipe-hint');
+  const questionInput = document.getElementById('questionInput');
+  const stopBtn = document.getElementById('stopBtn');
+
+  let isAnimating = false;
+  let flippedCards = [false, false, false];
+  let cardResults = [null, null, null];
+  let currentRound = 0;   // 0,1,2 共三轮
+  let comboCount = 0;
+  let maxCombo = 0;
+  let sessionResults = [];
+
+  // ======= 星座/运势内容池 =======
+
+  var zodiacs = [
+    { sign: '♈', name: '白羊座', emoji: '🔥' },
+    { sign: '♉', name: '金牛座', emoji: '🌿' },
+    { sign: '♊', name: '双子座', emoji: '💫' },
+    { sign: '♋', name: '巨蟹座', emoji: '🌊' },
+    { sign: '♌', name: '狮子座', emoji: '👑' },
+    { sign: '♍', name: '处女座', emoji: '🌾' },
+    { sign: '♎', name: '天秤座', emoji: '⚖️' },
+    { sign: '♏', name: '天蝎座', emoji: '🦂' },
+    { sign: '♐', name: '射手座', emoji: '🏹' },
+    { sign: '♑', name: '摩羯座', emoji: '⛰️' },
+    { sign: '♒', name: '水瓶座', emoji: '💧' },
+    { sign: '♓', name: '双鱼座', emoji: '🐟' }
+  ];
+
+  var goodTips = [
+    '今日贵人星座在侧，大胆行动。',
+    '适合开启新项目，直觉会指引你。',
+    '桃花运势走高，别宅在家了。',
+    '沟通是今天的超能力，多聊聊。',
+    '财源在东南方向，留意小惊喜。',
+    '水逆已过，一切都在好转。',
+    '灵感爆棚的一天，创意挡不住。',
+    '适合提加薪，领导今天心情好。',
+    '旧人重逢的概率很大。',
+    '今天是你的幸运日，放手一搏。',
+    '适合运动出汗，代谢负能量。',
+    '投资直觉敏锐，小试牛刀。',
+    '下午三点有好事发生。',
+    '今天说的话特别有分量。',
+    '适合约饭，聊出好机会。'
+  ];
+
+  var neutralTips = [
+    '宜按兵不动，静待时机明朗。',
+    '今天不适合做重大决定，再等等。',
+    '保持现状是最好的策略。',
+    '运势波澜不惊，适合复盘整理。',
+    '适合整理桌面和电脑文件。',
+    '多喝水，少说话，平安下班。',
+    '今天跟平时没什么不同，稳。',
+    '适合列清单，但别急着执行。',
+    '观望是今天最好的策略。'
+  ];
+
+  var badTips = [
+    '今日宜低调，避开不必要的冲突。',
+    '小心口舌之争，说话留三分。',
+    '不利签约和承诺，能拖则拖。',
+    '堵车迟到预警，出门提前十分钟。',
+    '别冲动消费，尤其是电子产品。',
+    '今天别跟老板对视，容易中枪。',
+    '群消息免打扰，避免被@。',
+    '朋友圈少刷，容易心态失衡。',
+    '不适合加班，效率反而更低。',
+    '外卖可能送错，做好心理准备。',
+    '小心邮件发错人，检查三遍。',
+    '今天不管闲事，明哲保身。',
+    '不宜开会发言，容易被点名。'
+  ];
+
+  // ======= 翻牌交互 =======
+
+  window._flipCard = function(index) {
+    if (isAnimating) return;
+    if (flippedCards[index]) return; // 已翻过
+
+    flipCard(index);
+  };
+
+  window._shuffle = function() {
+    shuffleAll();
+  };
+
+  window._showHistory = function() {
+    showHistoryOverlay();
+  };
+
+  // ======= 单张翻牌动画 =======
+
+  function flipCard(index) {
+    isAnimating = true;
+    var card = cardWrappers[index];
+
+    var rand = Math.random();
+    var result;
+    if (rand < 0.68) result = 'shengbei';
+    else if (rand < 0.85) result = 'xiaobei';
+    else result = 'yinbei';
+
+    cardResults[index] = result;
+    updateCardFace(card, result);
+
+    // ① 浮起
+    card.style.transition = 'transform 0.8s cubic-bezier(0.22, 0.05, 0.36, 1)';
+    card.style.transform = 'translateY(-20px) rotateY(15deg) scale(1.06)';
+    swipeHint.textContent = '...';
+    swipeHint.style.opacity = '0.4';
+
+    // ② 翻转
+    setTimeout(function() {
+      card.style.transition = 'transform 1.0s cubic-bezier(0.25, 0.05, 0.3, 0.98)';
+      card.style.transform = 'translateY(-40px) rotateY(180deg) scale(1.08)';
+    }, 800);
+
+    // ③ 落定
+    setTimeout(function() {
+      card.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.2, 0.55, 1)';
+      card.style.transform = 'translateY(0) rotateY(180deg) scale(1)';
+    }, 1800);
+
+    // 完成
+    setTimeout(function() {
+      isAnimating = false;
+      flippedCards[index] = true;
+      card.classList.add('flipped');
+      handleResult(result);
+
+      // 检查是否全部翻完
+      if (flippedCards.every(function(f) { return f; })) {
+        onAllFlipped();
+      } else {
+        var left = flippedCards.filter(function(f) { return !f; }).length;
+        swipeHint.textContent = '还剩 ' + left + ' 张，继续翻牌';
+        swipeHint.style.opacity = '1';
+      }
+    }, 2300);
+  }
+
+  // ======= 更新卡面内容 =======
+
+  function updateCardFace(card, result) {
+    var front = card.querySelector('.card-front');
+    var icon = front.querySelector('.card-result-icon');
+    var label = front.querySelector('.card-result-label');
+    var tip = front.querySelector('.card-tip');
+    var sign = front.querySelector('.sign');
+    var zname = front.querySelector('.zodiac-name');
+
+    // 随机星座
+    var zodiac = zodiacs[Math.floor(Math.random() * zodiacs.length)];
+    sign.textContent = zodiac.sign;
+    zname.textContent = zodiac.name + ' ' + zodiac.emoji;
+
+    if (result === 'shengbei') {
+      icon.textContent = '✨';
+      label.textContent = '圣 杯';
+      label.style.color = '#c49b2c';
+      tip.textContent = goodTips[Math.floor(Math.random() * goodTips.length)];
+    } else if (result === 'xiaobei') {
+      icon.textContent = '😄';
+      label.textContent = '笑 杯';
+      label.style.color = '#8a7a58';
+      tip.textContent = neutralTips[Math.floor(Math.random() * neutralTips.length)];
+    } else {
+      icon.textContent = '😔';
+      label.textContent = '阴 杯';
+      label.style.color = '#6a5a4a';
+      tip.textContent = badTips[Math.floor(Math.random() * badTips.length)];
+    }
+  }
+
+  // ======= 全部翻完 =======
+
+  function onAllFlipped() {
+    // 检查里程碑
+    var allShengbei = cardResults.every(function(r) { return r === 'shengbei'; });
+    var shengbeiCount = cardResults.filter(function(r) { return r === 'shengbei'; }).length;
+
+    if (allShengbei) {
+      setTimeout(function() { showMilestone('🌟 三连圣杯！'); }, 400);
+    } else if (shengbeiCount === 2) {
+      setTimeout(function() { showMilestone('✨ 两圣一杯！'); }, 400);
+    }
+
+    if (currentRound >= 2) {
+      // 三轮结束，强制结算
+      swipeHint.textContent = '三轮已满，结算中...';
+      swipeHint.style.opacity = '1';
+      setTimeout(function() { settleAndSave(); }, 1200);
+    } else {
+      swipeHint.textContent = '第 ' + (currentRound + 1) + ' 轮完成，点击洗牌继续';
+      swipeHint.style.opacity = '1';
+      shuffleBtn.textContent = '🔄 洗牌 · 第 ' + (currentRound + 2) + ' 轮';
+      shuffleBtn.classList.add('show');
+    }
+  }
+
+  // ======= 洗牌 =======
+
+  function shuffleAll() {
+    isAnimating = true;
+    shuffleBtn.classList.remove('show');
+    swipeHint.style.opacity = '0';
+    currentRound++;
+
+    var done = 0;
+    cardWrappers.forEach(function(card, i) {
+      card.style.transition = 'transform 0.5s ease-in-out';
+      card.style.transform = 'translateY(0) rotateY(0deg) scale(1)';
+
+      setTimeout(function() {
+        flippedCards[i] = false;
+        cardResults[i] = null;
+        card.classList.remove('flipped');
+        done++;
+        if (done === 3) {
+          isAnimating = false;
+          swipeHint.textContent = '✨ 第 ' + (currentRound + 1) + ' 轮 · 依次点击卡牌';
+          swipeHint.style.opacity = '1';
+        }
+      }, 500);
+    });
+  }
+
+
+  // ======= 里程碑提示 =======
+
+  function showMilestone(text) {
+    var toast = document.createElement('div');
+    toast.className = 'milestone-toast';
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 2200);
+  }
+
+  // ======= 结果处理 + 连击 =======
+
+  function handleResult(result) {
+    sessionResults.push(result);
+
+    if (result === 'shengbei') {
+      comboCount++;
+      if (comboCount > maxCombo) maxCombo = comboCount;
+      if (comboCount === 3) showMilestone('🔥 三连击！');
+      else if (comboCount === 6) showMilestone('⚡ 六连击！');
+      else if (comboCount >= 9) { comboCount = 9; triggerComboNine(); }
+    } else {
+      comboCount = 0;
+    }
+  }
+
+  // ======= 九连暴击 =======
+
+  function triggerComboNine() {
+    showMilestone('🌟 九连暴击！！');
+    isAnimating = true;
+    swipeHint.style.display = 'none';
+
+    // 屏幕闪烁
+    document.body.classList.add('critical-bg');
+    setTimeout(function() { document.body.classList.remove('critical-bg'); }, 2000);
+
+    // 金币雨
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:200;';
+    document.body.appendChild(overlay);
+
+    var emojis = ['💰','🪙','✨','🌟','💎','📈','🏆'];
+    for (var i = 0; i < 40; i++) {
+      var coin = document.createElement('div');
+      coin.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      coin.style.cssText =
+        'position:absolute;left:' + Math.random() * 100 + '%;' +
+        'font-size:' + (20 + Math.random() * 36) + 'px;' +
+        'animation:coinFall ' + (1.2 + Math.random() * 2) + 's linear forwards;' +
+        'animation-delay:' + Math.random() * 0.5 + 's;';
+      overlay.appendChild(coin);
+    }
+
+    // 居中大字
+    var promo = document.createElement('div');
+    promo.style.cssText =
+      'position:fixed;top:40%;left:50%;' +
+      'font-size:32px;font-weight:bold;color:var(--approval-red);' +
+      'text-shadow:0 0 24px rgba(196,30,58,0.6);z-index:201;' +
+      'animation:promoPop 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;' +
+      'white-space:nowrap;pointer-events:none;';
+    promo.textContent = '🌟 升职加薪！！🌟';
+    document.body.appendChild(promo);
+
+    setTimeout(function() {
+      overlay.remove();
+      promo.remove();
+      settleAndSave();
+    }, 2800);
+  }
+
+  // ======= STOP 结算 =======
+
+  stopBtn.addEventListener('click', function() {
+    if (sessionResults.length === 0) return;
+    settleAndSave();
+  });
+
+  // ======= 解读文本池 =======
+
+  function getInterpretation(question, tier, shengbeiCount, totalThrows) {
+    var q = question.trim();
+    var hasQ = q.length > 0;
+    // 提取问题关键词用于呼应
+    var keywords = extractKeywords(q);
+
+    var pool;
+    if (tier === 'daji') {
+      pool = [
+        '九天连圣！老板看了都沉默，今日宜提涨薪、宜早退、宜一切。你的运势已经超过了99%的打工人，KPI之神在对你微笑。',
+        '九连暴击达成！这是打工人之神的旨意——今天你最大。想做什么就去做，宇宙站在你这边，连HR都拦不住你。',
+        '圣杯九连！这是堪比中彩票的运势。建议立刻去买张彩票，然后去找老板谈那个你酝酿了半年的涨薪计划。',
+        '九天连圣，天降祥瑞！今天你是公司的神，领导的领导都会对你刮目相看。把握住，这是属于你的高光时刻。'
+      ];
+    } else if (tier === 'ji') {
+      pool = [
+        '运势走高，今日提案过审概率大。建议趁机提需求，领导心情好。下午茶也归你了，别再委屈自己喝公司免费咖啡。',
+        '神明比了个OK，今天适合做决定。那个攒了很久的请假理由，可以用了。年假不用过期作废，这是神谕。',
+        '圣杯频出，今日顺风顺水。项目推进无障碍，同事配合度拉满。这种日子不常有，且行且珍惜。',
+        '今日运势如虹！适合推进搁置的项目、发起久违的约会、或单纯摸鱼一整天而不被发现。选择权在你。',
+        '财运小涨，可能是报销秒过，也可能是外卖红包比平时大。好事虽小，但今天会接连不断。'
+      ];
+    } else if (tier === 'ping') {
+      pool = [
+        '运势平平，需求可能会改。建议原地待命，不要冲动消费或裸辞。今天最好的策略就是——做一只安静的社畜。',
+        '诸神在开会，暂无明确指示。今天适合低调摸鱼、整理桌面、清空邮箱，不适合主动出击。',
+        '圣杯和阴杯五五开，说明老天也在犹豫。你的直觉和焦虑正在掰手腕，让它们再打一会儿。',
+        '运势不温不火，今天适合做一些机械性工作。把那些"有空再做"的琐事处理掉，也是一种胜利。'
+      ];
+    } else {
+      pool = [
+        '今日诸事不宜！会议改期、代码回滚、下班早点走。别跟老板对视，别在群里发言，存在感越低越好。',
+        '阴杯连连，今天大概率要背锅。建议保持沉默，能躲就躲。这不是你的问题，是运势的问题——明天就好了。',
+        '神明摇头了。下班关手机，明天再战。记住：公司没了你照样转，但你没了健康就什么都没了。',
+        '运势低迷，今天所有重要决定都建议推迟24小时。点外卖选最熟悉的店，走最熟悉的路，今天不冒险。',
+        '今日宜躺平。有些日子就是用来熬的，这不代表你不行，只是宇宙在告诉你——今天歇一歇没关系。'
+      ];
+    }
+
+    var text = pool[Math.floor(Math.random() * pool.length)];
+
+    // 如果有问题，添加呼应
+    if (hasQ && keywords.length > 0) {
+      var suffix = '';
+      if (tier === 'daji' || tier === 'ji') {
+        suffix = ' 关于"' + q + '"这件事——大胆去做吧！';
+      } else if (tier === 'ping') {
+        suffix = ' 关于"' + q + '"——再观察观察，不急于一时。';
+      } else {
+        suffix = ' 关于"' + q + '"——建议暂时搁置，回头再说。';
+      }
+      text = text + suffix;
+    }
+
+    return text;
+  }
+
+  function extractKeywords(q) {
+    // 简单提取：去掉标点，取前几个有意义的词
+    return q.replace(/[？?！!。，,、\s]/g, '').slice(0, 20);
+  }
+
+  // ======= 结算保存 =======
+
+  var STORAGE_KEY = 'jiaobei_records';
+
+  function settleAndSave() {
+    var totalThrows = sessionResults.length;
+    var shengbeiCount = sessionResults.filter(function(r) { return r === 'shengbei'; }).length;
+    var ratio = totalThrows > 0 ? shengbeiCount / totalThrows : 0;
+    var question = questionInput.value;
+
+    var tierLabels = {
+      daji: ['🏆 带薪年假', '🏆 升职加薪', '🏆 人生巅峰', '🏆 欧皇附体'],
+      ji:   ['☕ 宜摸鱼', '☕ 今日大吉', '☕ 顺风顺水', '☕ 好运连连', '☕ 万事如意'],
+      ping: ['📋 需求评审中', '📋 待定中', '📋 观望模式', '📋 且听风吟', '📋 静待花开'],
+      xiong:['⚠️ 加班预警', '⚠️ 今日不宜', '⚠️ 诸事小心', '⚠️ 躺平保命', '⚠️ 低调做人']
+    };
+
+    var tier, tierKey;
+    if (comboCount >= 9 || maxCombo >= 9) {
+      tierKey = 'daji';
+    } else if (ratio >= 0.7) {
+      tierKey = 'ji';
+    } else if (ratio >= 0.4) {
+      tierKey = 'ping';
+    } else {
+      tierKey = 'xiong';
+    }
+    var pool2 = tierLabels[tierKey];
+    var tierLabel = pool2[Math.floor(Math.random() * pool2.length)];
+
+    var interpretation = getInterpretation(question, tierKey, shengbeiCount, totalThrows);
+
+    var record = {
+      id: Date.now(),
+      date: new Date().toLocaleString('zh-CN'),
+      question: question || '心诚则灵 · 未言之事',
+      results: sessionResults.slice(),
+      maxCombo: Math.max(maxCombo, comboCount),
+      totalThrows: totalThrows,
+      shengbeiCount: shengbeiCount,
+      tier: tierKey,
+      tierLabel: tierLabel,
+      interpretation: interpretation
+    };
+    saveRecord(record);
+    showSettlePanel(record);
+  }
+
+  function showSettlePanel(record) {
+    // 移除旧面板
+    var old = document.querySelector('.settle-overlay');
+    if (old) old.remove();
+
+    // 问题可行性提示
+    var feasibilityHtml = '';
+    if (record.question && record.question !== '心诚则灵 · 未言之事') {
+      var feasibilityIcon, feasibilityText, feasibilityColor;
+      if (record.tier === 'daji' || record.tier === 'ji') {
+        feasibilityIcon = '✅';
+        feasibilityText = '此事可行，放手去做';
+        feasibilityColor = '#217346';
+      } else if (record.tier === 'ping') {
+        feasibilityIcon = '🤔';
+        feasibilityText = '时机未到，再观望一阵';
+        feasibilityColor = '#d4a017';
+      } else {
+        feasibilityIcon = '⛔';
+        feasibilityText = '眼下不宜，建议搁置';
+        feasibilityColor = '#c41e3a';
+      }
+      feasibilityHtml =
+        '<div style="background:#fafaf5;border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:center;">' +
+          '<div style="font-size:13px;color:#888;margin-bottom:4px;">关于「' + escHtml(record.question) + '」</div>' +
+          '<div style="font-size:18px;font-weight:bold;color:' + feasibilityColor + ';">' +
+            feasibilityIcon + ' ' + feasibilityText +
+          '</div>' +
+        '</div>';
+    }
+
+    var overlay = document.createElement('div');
+    overlay.className = 'settle-overlay';
+    overlay.innerHTML =
+      '<div class="settle-card">' +
+        feasibilityHtml +
+        '<div class="settle-tier">' + record.tierLabel + '</div>' +
+        '<div class="settle-stats">' +
+          '总掷杯 ' + record.totalThrows + ' 次 | 圣杯 ' + record.shengbeiCount + ' 次 | 最高连击 ' + record.maxCombo +
+        '</div>' +
+        '<div class="settle-interpretation" id="settleInterp">' +
+          '<span class="ai-badge">🤖 AI 解读中...</span><br>' +
+          '<span id="interpText"></span><span class="typing-cursor" id="interpCursor"></span>' +
+        '</div>' +
+        '<div class="settle-date">' + record.date + '</div>' +
+        '<div class="settle-actions">' +
+          '<button class="btn-share" id="btnShare" disabled>📤 分享战绩</button>' +
+          '<button class="btn-retry" id="btnRetry">🔄 再来一局</button>' +
+        '</div>' +
+        '<div class="history-section">' +
+          '<div class="history-title">📋 历史战绩</div>' +
+          '<div class="history-list" id="historyList"></div>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+    stopBtn.style.display = 'none';
+
+    // AI 打字机效果
+    typewriterEffect(record.interpretation);
+
+    // 分享按钮
+    overlay.querySelector('#btnShare').addEventListener('click', function() {
+      generateShareImage(record);
+    });
+
+    // 再来一局
+    overlay.querySelector('#btnRetry').addEventListener('click', resetGame);
+
+    // 渲染历史
+    renderHistory();
+
+    // 点击遮罩关闭（不关闭，只能点按钮）
+    // overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  }
+
+  function resetGame() {
+    sessionResults = [];
+    comboCount = 0;
+    maxCombo = 0;
+    isAnimating = false;
+    flippedCards = [false, false, false];
+    cardResults = [null, null, null];
+    currentRound = 0;
+    shuffleBtn.textContent = '🔄 洗牌 · 第 2 轮';
+    cardWrappers.forEach(function(card) {
+      card.style.transition = 'transform 0.4s ease-in-out';
+      card.style.transform = 'translateY(0) rotateY(0deg) scale(1)';
+      card.classList.remove('flipped');
+    });
+    shuffleBtn.classList.remove('show');
+    swipeHint.style.display = '';
+    swipeHint.style.opacity = '1';
+    swipeHint.textContent = '✨ 第 1 轮 · 依次点击卡牌';
+    stopBtn.style.display = '';
+    var overlay = document.querySelector('.settle-overlay');
+    if (overlay) overlay.remove();
+    var sp = document.querySelector('.share-preview');
+    if (sp) sp.remove();
+    document.body.classList.remove('critical-bg');
+  }
+
+  // ======= localStorage =======
+
+  function saveRecord(record) {
+    var records = [];
+    try { records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) {}
+    records.unshift(record);
+    if (records.length > 5) records = records.slice(0, 5);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  function loadRecords() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { return []; }
+  }
+
+  function escHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function showHistoryOverlay() {
+    var existing = document.querySelector('.history-overlay');
+    if (existing) { existing.remove(); return; }
+
+    var records = loadRecords();
+    var overlay = document.createElement('div');
+    overlay.className = 'history-overlay';
+
+    var html = '<div class="history-card">' +
+      '<div class="history-card-header">' +
+        '<span class="history-card-title">📋 历史战绩</span>' +
+        '<button class="history-card-close">✕</button>' +
+      '</div>' +
+      '<div class="history-card-body">';
+
+    if (records.length === 0) {
+      html += '<div class="history-empty">暂无记录<br>快去翻牌吧 ✨</div>';
+    } else {
+      for (var i = 0; i < Math.min(records.length, 30); i++) {
+        var r = records[i];
+        var emoji = r.tier === 'daji' ? '🏆' : r.tier === 'ji' ? '☕' : r.tier === 'ping' ? '📋' : '⚠️';
+        html +=
+          '<div class="history-item" style="cursor:default;">' +
+            '<div class="history-item-left">' +
+              '<div class="history-item-question">' + escHtml(r.question) + '</div>' +
+              '<div class="history-item-date">' + r.date + ' · ' + r.totalThrows + '掷' + r.shengbeiCount + '圣杯</div>' +
+            '</div>' +
+            '<div class="history-item-tier">' + emoji + ' ' + r.tierLabel + '</div>' +
+          '</div>';
+      }
+    }
+
+    html += '</div></div>';
+    overlay.innerHTML = html;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.history-card-close').addEventListener('click', function() {
+      overlay.remove();
+    });
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.remove();
+    });
+  }
+
+  function renderHistory() {
+    var records = loadRecords();
+    var list = document.getElementById('historyList');
+    if (!list) return;
+    if (records.length === 0) {
+      list.innerHTML = '<div style="color:#ccc;text-align:center;padding:16px;">暂无记录，快去掷一局吧</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < Math.min(records.length, 20); i++) {
+      var r = records[i];
+      var emoji = r.tier === 'daji' ? '🏆' : r.tier === 'ji' ? '☕' : r.tier === 'ping' ? '📋' : '⚠️';
+      html +=
+        '<div class="history-item">' +
+          '<div class="history-item-left">' +
+            '<div class="history-item-question">' + escHtml(r.question) + '</div>' +
+            '<div class="history-item-date">' + r.date + ' · ' + r.totalThrows + '掷' + r.shengbeiCount + '圣杯</div>' +
+          '</div>' +
+          '<div class="history-item-tier">' + emoji + '</div>' +
+        '</div>';
+    }
+    list.innerHTML = html;
+  }
+
+  // ======= Canvas 分享图 =======
+
+  function generateShareImage(record) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 600;
+    var ctx = canvas.getContext('2d');
+
+    // 先测量解读文本行数来确定画布高度
+    ctx.font = '18px "PingFang SC","Microsoft YaHei",sans-serif';
+    var lines = wrapText(ctx, '「' + record.interpretation + '」', 500);
+    var contentH = 280 + lines.length * 30 + 30; // 标题+战绩+解读+日期
+    canvas.height = contentH + 160; // +QR区域
+
+    // 便签纸背景
+    ctx.fillStyle = '#fdf8e8';
+    ctx.fillRect(0, 0, 600, canvas.height);
+
+    // 纹理线
+    ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+    for (var y = 0; y < canvas.height; y += 26) {
+      ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(580, y); ctx.stroke();
+    }
+
+    // 标题
+    ctx.fillStyle = '#2c2c2c';
+    ctx.font = 'bold 30px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('打工人的玄学时刻', 300, 55);
+
+    // 问题
+    ctx.fillStyle = '#888';
+    ctx.font = '16px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText('问：' + record.question, 300, 95);
+
+    // 档位图标
+    var tierEmoji = record.tier === 'daji' ? '🏆' : record.tier === 'ji' ? '☕' : record.tier === 'ping' ? '📋' : '⚠️';
+    ctx.font = '52px sans-serif';
+    ctx.fillText(tierEmoji, 300, 150);
+
+    // 档位标签
+    ctx.fillStyle = '#2c2c2c';
+    ctx.font = 'bold 24px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText(record.tierLabel, 300, 185);
+
+    // 战绩
+    ctx.fillStyle = '#666';
+    ctx.font = '16px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText('总掷杯 ' + record.totalThrows + ' 次 | 圣杯 ' + record.shengbeiCount + ' 次 | 最高连击 ' + record.maxCombo, 300, 218);
+
+    // 解读
+    ctx.fillStyle = '#2c2c2c';
+    ctx.font = '18px "PingFang SC","Microsoft YaHei",sans-serif';
+    for (var i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], 300, 262 + i * 30);
+    }
+
+    // 日期
+    var dateY = 262 + lines.length * 30 + 18;
+    ctx.fillStyle = '#ccc';
+    ctx.font = '12px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText(record.date, 300, dateY);
+
+    // 先展示基础图
+    var card = document.querySelector('.settle-card');
+    var existing = card.querySelector('.share-preview');
+    if (existing) existing.remove();
+    var img = document.createElement('img');
+    img.className = 'share-preview';
+    card.insertBefore(img, card.querySelector('.settle-actions'));
+
+    // 加载 QR 码，放在文字下方居中
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://holy-grail-b8u.pages.dev/';
+    var qrImg = new Image();
+    qrImg.crossOrigin = 'anonymous';
+    qrImg.onload = function() {
+      var qrY = dateY + 18;
+      ctx.drawImage(qrImg, 240, qrY, 120, 120);
+      ctx.fillStyle = '#aaa';
+      ctx.font = '11px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.fillText('扫码来玩', 300, qrY + 140);
+      img.src = canvas.toDataURL('image/png');
+    };
+    qrImg.onerror = function() {
+      var qrY = dateY + 12;
+      ctx.fillStyle = '#aaa';
+      ctx.font = '13px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.fillText('holy-grail-b8u.pages.dev', 300, qrY + 20);
+      img.src = canvas.toDataURL('image/png');
+    };
+    qrImg.src = qrUrl;
+  }
+
+  function wrapText(ctx, text, maxWidth) {
+    var lines = [];
+    var current = '';
+    for (var i = 0; i < text.length; i++) {
+      var test = current + text[i];
+      if (ctx.measureText(test).width > maxWidth && current.length > 0) {
+        lines.push(current);
+        current = text[i];
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  // ======= AI 打字机效果 =======
+
+  function typewriterEffect(fullText) {
+    var interpText = document.getElementById('interpText');
+    var interpCursor = document.getElementById('interpCursor');
+    var badge = document.querySelector('.ai-badge');
+    var shareBtn = document.getElementById('btnShare');
+    if (!interpText) return;
+
+    var text = '「' + fullText + '」';
+    var i = 0;
+    var speed = 100; // 每字速度 ms
+
+    function type() {
+      if (i < text.length) {
+        interpText.textContent += text[i];
+        i++;
+        // 标点符号长停顿
+        var delay = (/[，。！？、：；」]/.test(text[i - 1])) ? 350 : speed + Math.random() * 50;
+        setTimeout(type, delay);
+      } else {
+        // 打完，隐藏光标和 badge，启用分享按钮
+        if (interpCursor) interpCursor.style.display = 'none';
+        if (badge) badge.style.display = 'none';
+        if (shareBtn) shareBtn.disabled = false;
+      }
+    }
+
+    // 初始短暂延迟，模拟 AI 思考
+    setTimeout(type, 400);
+  }
+
+  // ======= 移动端适配 =======
+
+  // 防止微信内下拉回弹（但允许输入框和列表滚动）
+  document.body.addEventListener('touchmove', function(e) {
+    if (e.target.closest('.history-list') || e.target.closest('.question-input') || e.target.closest('.settle-card')) return;
+    e.preventDefault();
+  }, { passive: false });
+
+})();
+</script>
+</body>
+</html>
