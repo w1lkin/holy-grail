@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no">
   <title>掷筊问卜 · 打工人的玄学时刻</title>
+  <meta name="api-base" content="https://api.w1lkin.site">
+  <script src="https://api.w1lkin.site/sdk.js"></script>
   <style>
     :root {
       --bg: #f5f5f0;
@@ -477,6 +479,8 @@
   </style>
 </head>
 <body>
+  <div id="gp-bar" style="position:fixed;top:0;left:0;right:0;z-index:50;padding:6px 12px;background:rgba(20,24,40,.85)"></div>
+  <div id="gp-leaderboard" style="position:fixed;right:8px;bottom:8px;z-index:50;max-width:200px;padding:10px;background:rgba(20,24,40,.9);border-radius:12px"></div>
   <div class="app-container">
     <!-- 输入区 -->
     <div class="input-section">
@@ -922,8 +926,6 @@
 
   // ======= 结算保存 =======
 
-  var STORAGE_KEY = 'jiaobei_records';
-
   function settleAndSave() {
     var totalThrows = sessionResults.length;
     var shengbeiCount = sessionResults.filter(function(r) { return r === 'shengbei'; }).length;
@@ -1070,18 +1072,19 @@
     document.body.classList.remove('critical-bg');
   }
 
-  // ======= localStorage =======
+  // ======= 云端战绩（submitScore / getMyScores）=======
 
   function saveRecord(record) {
-    var records = [];
-    try { records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) {}
-    records.unshift(record);
-    if (records.length > 5) records = records.slice(0, 5);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    // 战绩上报云端：score = 最高圣杯连击数（越大越好）
+    try {
+      GamePlatform.submitScore('holy-grail', record.maxCombo, {
+        question: record.question, tier: record.tier, totalThrows: record.totalThrows, shengbeiCount: record.shengbeiCount,
+      });
+    } catch (e) {}
   }
 
   function loadRecords() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { return []; }
+    return []; // 历史改从云端 getMyScores 渲染
   }
 
   function escHtml(s) {
@@ -1134,23 +1137,28 @@
     });
   }
 
-  function renderHistory() {
-    var records = loadRecords();
+  async function renderHistory() {
     var list = document.getElementById('historyList');
     if (!list) return;
-    if (records.length === 0) {
+    var items = [];
+    try { items = await GamePlatform.getMyScores('holy-grail', 20); } catch (e) { items = []; }
+    if (items.length === 0) {
       list.innerHTML = '<div style="color:#ccc;text-align:center;padding:16px;">暂无记录，快去掷一局吧</div>';
       return;
     }
+    var tierEmoji = { daji: '🏆', ji: '☕', ping: '📋', xiong: '⚠️' };
     var html = '';
-    for (var i = 0; i < Math.min(records.length, 20); i++) {
-      var r = records[i];
-      var emoji = r.tier === 'daji' ? '🏆' : r.tier === 'ji' ? '☕' : r.tier === 'ping' ? '📋' : '⚠️';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var m = it.meta || {};
+      var emoji = tierEmoji[m.tier] || '📋';
+      var q = m.question || '心诚则灵';
+      var d = new Date(it.created_at).toLocaleString('zh-CN');
       html +=
         '<div class="history-item">' +
           '<div class="history-item-left">' +
-            '<div class="history-item-question">' + escHtml(r.question) + '</div>' +
-            '<div class="history-item-date">' + r.date + ' · ' + r.totalThrows + '掷' + r.shengbeiCount + '圣杯</div>' +
+            '<div class="history-item-question">' + escHtml(q) + '</div>' +
+            '<div class="history-item-date">' + d + ' · 最高连击 ' + it.score + '</div>' +
           '</div>' +
           '<div class="history-item-tier">' + emoji + '</div>' +
         '</div>';
@@ -1229,7 +1237,7 @@
     card.insertBefore(img, card.querySelector('.settle-actions'));
 
     // 加载 QR 码，放在文字下方居中
-    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://holy-grail-b8u.pages.dev/';
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://holy-grail.w1lkin.site/';
     var qrImg = new Image();
     qrImg.crossOrigin = 'anonymous';
     qrImg.onload = function() {
@@ -1244,7 +1252,7 @@
       var qrY = dateY + 12;
       ctx.fillStyle = '#aaa';
       ctx.font = '13px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText('holy-grail-b8u.pages.dev', 300, qrY + 20);
+      ctx.fillText('holy-grail.w1lkin.site', 300, qrY + 20);
       img.src = canvas.toDataURL('image/png');
     };
     qrImg.src = qrUrl;
@@ -1307,6 +1315,13 @@
   }, { passive: false });
 
 })();
+
+// === 平台接入：硬登录门（未登录全屏拦截）===
+GamePlatform.init();
+GamePlatform.mountGate({ gameId: 'holy-grail' }).then(function () {
+  GamePlatform.mountBar(document.getElementById('gp-bar'), { gameId: 'holy-grail' });
+  GamePlatform.mountLeaderboard(document.getElementById('gp-leaderboard'), { gameId: 'holy-grail' });
+});
 </script>
 </body>
 </html>
