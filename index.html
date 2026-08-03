@@ -1236,7 +1236,7 @@
     card.insertBefore(img, card.querySelector('.settle-actions'));
 
     // 加载 QR 码，放在文字下方居中
-    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://holy-grail.w1lkin.site/';
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://holy-grail-b8u.pages.dev/';
     var qrImg = new Image();
     qrImg.crossOrigin = 'anonymous';
     qrImg.onload = function() {
@@ -1251,7 +1251,7 @@
       var qrY = dateY + 12;
       ctx.fillStyle = '#aaa';
       ctx.font = '13px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText('holy-grail.w1lkin.site', 300, qrY + 20);
+      ctx.fillText('holy-grail-b8u.pages.dev', 300, qrY + 20);
       img.src = canvas.toDataURL('image/png');
     };
     qrImg.src = qrUrl;
