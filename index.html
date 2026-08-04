@@ -1315,10 +1315,9 @@
 
 })();
 
-// === 平台接入：硬登录门（未登录全屏拦截）===
+// === 平台接入：硬登录门（未登录跳转门户页登录）===
 GamePlatform.init();
-GamePlatform.mountGate({ gameId: 'holy-grail' }).then(function () {
-});
+GamePlatform.mountGate({ gameId: 'holy-grail' });
 </script>
   <a href="https://game-list-arv.pages.dev" class="gp-home-btn" title="主页">🏠</a>
   <style>
